@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="robot_name" default="caroline" />
+  
+  <node name="trr_state_estimator_display_node" pkg="two_d_guidance" type="trr_state_estimator_display_node.py">
+    <param name="camera" value="camera_horiz_front"/>
+  </node>
+ 
+    
+</launch>
