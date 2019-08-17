@@ -7,6 +7,9 @@ import pdb
 
 import two_d_guidance.trr.rospy_utils as trr_rpu
 
+#
+# Display Race Manager Status overlayed on horizon camera image
+#
 
 class ImgPublisher(trr_rpu.DebugImgPublisher):
     def __init__(self, img_topic):
@@ -16,9 +19,12 @@ class ImgPublisher(trr_rpu.DebugImgPublisher):
         y0=20; font_color=(0,255,255)
         f, h, c, w = cv2.FONT_HERSHEY_SIMPLEX, 1.25, font_color, 2
         cv2.putText(img_bgr, 'Race Manager', (y0, 40), f, h, c, w)
-        _m, _cl, _tl = model.get()
-        cv2.putText(img_bgr, 'mode {}'.format(trr_rpu.RaceManagerStatusStr(_m)), (y0, 90), f, h, c, w)
-        cv2.putText(img_bgr, 'lap {}/{}'.format(_cl, _tl), (y0, 140), f, h, c, w)
+        try:
+            _m, _cl, _tl = model.get()
+            cv2.putText(img_bgr, 'mode {}'.format(trr_rpu.RaceManagerStatusStr(_m)), (y0, 90), f, h, c, w)
+            cv2.putText(img_bgr, 'lap {}/{}'.format(_cl, _tl), (y0, 140), f, h, c, w)
+        except trr_rpu.NoRXMsgException: pass
+        except trr_rpu.RXMsgTimeoutException: pass
 
 class Node(trr_rpu.PeriodicNode):
     def __init__(self):
