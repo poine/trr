@@ -43,16 +43,17 @@ def filter(vel_sps):
       out[i] = ref.run(dt, vel_sps2[i])[0]
    return out, vel_sps2
 
-def add_vel_profile(fname):
+# velocity profile proportional to path curvature
+def add_vel_profile(fname, v0=1.75, kc=0.75):
    tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
    fname = os.path.join(tdg_dir, 'paths/demo_z/track_trr_real.npz')
    path = trr_u.TrrPath(fname)
    for i, c in enumerate(path.curvatures):
-      path.vels[i] = 1. - 0.25*abs(c) # why not ...
-   fltrd, foo = filter(path.vels)
+      path.vels[i] = v0 - kc*abs(c) # why not ...
+   fltrd, delayed_curv = filter(path.vels)
    if 1:
       plt.plot(fltrd)
-      plt.plot(foo)
+      plt.plot(delayed_curv, alpha=0.5)
       plt.plot(path.vels)
       plt.show()
    path.vels = fltrd
@@ -61,6 +62,9 @@ def add_vel_profile(fname):
    p2 = trr_u.TrrPath(fname)
    return p2
    
+
+
+
 
 
 if __name__ == '__main__':

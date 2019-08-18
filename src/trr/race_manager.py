@@ -56,6 +56,7 @@ class RaceManager:
         self.cur_lap = 0
         self.lap_start_stamp = stamp
         self.lap_times = [0.]
+        car.set_guidance_vel_ctl_mode(1) # profile
         car.set_guidance_mode(2) # guidance is driving when racing
 
     def periodic_racing(self, state_est_sub, traffic_light_sub, update_race_mode_cbk, stamp):
@@ -83,10 +84,11 @@ class RaceManager:
     # -Join Start: we check for approaching start line 
     #
     def enter_join_start(self, car,stamp):
+        car.set_guidance_vel_ctl_mode(0) # Cst
         car.set_guidance_mode(2) # driving when going to start
 
     def periodic_join_start(self, state_est_sub, traffic_light_sub, update_race_mode_cbk, stamp, dist_to_stop_at=0.15):
-        s_est, v_est, cur_lap, dist_to_start, dist_to_finish = state_est_sub.get()
+        s_est, is_est, v_est, dist_to_start, dist_to_finish = state_est_sub.get()
         if dist_to_start < dist_to_stop_at:
             rospy.loginfo('start joined, going to ready')
             update_race_mode_cbk(RaceManager.mode_ready)

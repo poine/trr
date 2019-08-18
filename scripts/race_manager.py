@@ -18,12 +18,10 @@ class Node(trr_rpu.PeriodicNode):
         trr_rpu.PeriodicNode.__init__(self, 'race_manager_node')
         # this is our model
         self.race_manager = trr_rm.RaceManager()
-
         # we publish our status
         self.status_pub = trr_rpu.RaceManagerStatusPublisher()
         # we expose a service to be informed ( by state estimation) when landmarks are passed
         self.lm_service = rospy.Service('LandmarkPassed', two_d_guidance.srv.LandmarkPassed, self.on_landmark_passed)
-        #self.guidance_cfg_client, self.race_manager_cfg_srv = None, None 
         # we manipulate parameters exposed by the guidance node
         guidance_client_name = "trr_guidance_node"
         self.guidance_cfg_client = dyn_rec_clt.Client(guidance_client_name, timeout=30,
@@ -91,10 +89,15 @@ class Node(trr_rpu.PeriodicNode):
         if self.guidance_cfg_client is not None:
             self.guidance_cfg_client.update_configuration({"guidance_mode":mode})
 
+    def set_guidance_vel_ctl_mode(self, mode):
+        mode_name = ['Cst', 'Profile', 'Curv']
+        rospy.loginfo('   set guidance vel ctl mode to {}'.format(mode_name[mode]))
+        self.guidance_cfg_client.update_configuration({"vel_ctl_mode":mode})
 
-            
-   
-
+    def set_guidance_vel_sp(self, _v):
+        rospy.loginfo('   set guidance vel sp to {}'.format(_v))
+        self.guidance_cfg_client.update_configuration({"vel_sp":_v})
+        
         
 def main(args):
     Node().run(20)
