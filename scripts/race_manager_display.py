@@ -16,13 +16,17 @@ class ImgPublisher(trr_rpu.DebugImgPublisher):
         trr_rpu.DebugImgPublisher.__init__(self, img_topic, '/trr_race_manager/image_debug')
 
     def _draw(self, img_bgr, model, data):
-        y0=20; font_color=(0,255,255)
+        y0=20; font_color=(128,0,255)
         f, h, c, w = cv2.FONT_HERSHEY_SIMPLEX, 1.25, font_color, 2
         cv2.putText(img_bgr, 'Race Manager', (y0, 40), f, h, c, w)
         try:
-            _m, _cl, _tl = model.get()
-            cv2.putText(img_bgr, 'mode {}'.format(trr_rpu.RaceManagerStatusStr(_m)), (y0, 90), f, h, c, w)
-            cv2.putText(img_bgr, 'lap {}/{}'.format(_cl, _tl), (y0, 140), f, h, c, w)
+            _m, _cl, _tl, _times = model.get()
+            real_lap = min(_cl, _tl)
+            cv2.putText(img_bgr, 'mode: {}'.format(trr_rpu.RaceManagerStatusStr(_m)), (y0, 90), f, h, c, w)
+            cv2.putText(img_bgr, 'lap: {}/{}'.format(real_lap, _tl), (y0, 140), f, h, c, w)
+            for i,_t in enumerate(_times[:real_lap+1]):
+                cv2.putText(img_bgr, ' {}: {:.2f}s'.format(i, _t), (y0, 190+50*i), f, h, c, w)
+                
         except trr_rpu.NoRXMsgException: pass
         except trr_rpu.RXMsgTimeoutException: pass
 
