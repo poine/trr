@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 import os, sys, roslib, rospy, rospkg, rostopic
-import dynamic_reconfigure.client,  dynamic_reconfigure.server
+import dynamic_reconfigure.client as dyn_rec_clt,  dynamic_reconfigure.server as dyn_rec_srv
 
 import pdb
 
 import two_d_guidance.trr.utils as trr_u
 import two_d_guidance.trr.rospy_utils as trr_rpu
 import two_d_guidance.trr.state_estimation as trr_se
-import two_d_guidance.cfg.trr_race_managerConfig
 import two_d_guidance.srv
 
+import trr.cfg.race_managerConfig
 import trr.race_manager as trr_rm
 
 # TODO: add traffic light display
@@ -18,6 +18,7 @@ class Node(trr_rpu.PeriodicNode):
     mode_staging, mode_ready, mode_racing, mode_finished, mode_join_start = range(5)
     def __init__(self, autostart=False):
         trr_rpu.PeriodicNode.__init__(self, 'race_manager_node')
+        # this is our model
         self.race_manager = trr_rm.RaceManager()
         # we publish our status
         self.status_pub = trr_rpu.RaceManagerStatusPublisher()
@@ -26,12 +27,12 @@ class Node(trr_rpu.PeriodicNode):
         self.guidance_cfg_client, self.race_manager_cfg_srv = None, None 
         # we manipulate parameters exposed by the guidance node
         guidance_client_name = "trr_guidance_node"
-        self.guidance_cfg_client = dynamic_reconfigure.client.Client(guidance_client_name, timeout=30,
-                                                                     config_callback=self.guidance_cfg_callback)
+        self.guidance_cfg_client = dyn_rec_clt.Client(guidance_client_name, timeout=30,
+                                                      config_callback=self.guidance_cfg_callback)
         rospy.loginfo(' guidance_client_name: {}'.format(guidance_client_name))
         # we will expose some parameters to users
-        self.race_manager_cfg_srv = dynamic_reconfigure.server.Server(two_d_guidance.cfg.trr_race_managerConfig,
-                                                                      self.race_manager_cfg_callback)
+        self.race_manager_cfg_srv = dyn_rec_srv.Server(trr.cfg.race_managerConfig,
+                                                       self.race_manager_cfg_callback)
         self.dyn_cfg_update_race_mode(Node.mode_racing if autostart else Node.mode_staging)
         # we subscribe to state estimator and traffic light
         self.state_est_sub = trr_rpu.TrrStateEstimationSubscriber(what='race_manager')
@@ -67,7 +68,7 @@ class Node(trr_rpu.PeriodicNode):
         #pdb.set_trace()
         #print config, level
         self.set_race_mode(config['mode'])
-        self.nb_lap = config['nb_lap']
+        #self.nb_lap = config['nb_lap'] TODO
         #self.cur_lap = config['cur_lap']
         return config
 
