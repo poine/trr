@@ -48,7 +48,7 @@ catkin_python_setup()
 add_message_files(
   FILES
   RaceManagerStatus.msg
-#   Message2.msg
+  VisionLaneStatus.msg
 )
 
 ## Generate services in the 'srv' folder

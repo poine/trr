@@ -9,11 +9,12 @@ class RaceManager:
         self.lap_times = []
 
     def next_lap(self, stamp):
-        self.lap_times[-1] = (stamp - self.lap_start_stamp).to_sec()
-        self.lap_start_stamp = stamp
-        self.lap_times.append(0.)
-        self.cur_lap += 1
-        print 'lap time {} cur_lap {}'.format(self.lap_times[-2], self.cur_lap)
+        if self.mode == RaceManager.mode_racing:
+            self.lap_times[-1] = (stamp - self.lap_start_stamp).to_sec()
+            self.lap_start_stamp = stamp
+            self.lap_times.append(0.)
+            self.cur_lap += 1
+            print 'lap time {} cur_lap {}'.format(self.lap_times[-2], self.cur_lap)
 
     def set_cur_lap(self, _v):
         self.cur_lap = _v

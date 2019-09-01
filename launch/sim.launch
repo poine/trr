@@ -1,0 +1,153 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="start_gazebo" default="true" />
+  <arg name="start_gazebo_gui" default="true" />
+  <arg name="start_filter" default="false" />
+  <arg name="start_teleop" default="true" />
+  <arg name="start_trr_lane_detect" default="true" />
+  <arg name="start_trr_fake_lane_detect" default="false" />
+  <arg name="start_trr_start_finish" default="true" />
+  <arg name="start_trr_traffic_light" default="true" />
+  <arg name="start_trr_guidance" default="true" />
+  <arg name="start_map" default="true" />
+  <arg name="start_trr_state_estimation" default="true" />
+  <arg name="start_trr_race_manager" default="true" />
+  <arg name="start_trr_world" default="true" />
+  <arg name="start_viz" default="false" />
+  
+  <arg name="world_name" default="$(find common_simulations)/worlds/track_trr_z.world" />
+  <arg name="robot_type" default="roverboard" /> <!-- also works with nono -->
+  <arg name="robot_name" default="caroline" />
+
+  <arg name="filter_use_gz_truth" default="true"/>
+  <arg name="robot_marker" default="0" />
+  <arg name="map" default="$(find trr)/maps/expe_z/map.yaml" />
+
+  
+  <!-- ****** Process args *****  -->
+  <arg name="sim_pkg" value="$(arg robot_type)_simulator"/>
+  <arg name="guid_pkg" value="$(arg robot_type)_guidance"/>
+  
+  <!--  ****** Gazebo and robot therein *****  -->
+  <group if="$(arg start_gazebo)">
+    <include file="$(eval find(arg('sim_pkg')) + '/launch/empty_world.launch')">	
+      <arg name="start_gazebo" value="$(arg start_gazebo)" />
+      <arg name="gz_gui" value="$(arg start_gazebo_gui)" />
+      <arg name="world_name" value="$(arg world_name)" />
+      <arg name="robot_name" value="$(arg robot_name)" />
+      <arg name="robot_initial_xy" value="-x -1.75 -y 1.25"/>
+    </include>
+  </group>
+  
+  <!-- ****** Fix gazebo not doing frames namespacing ***** -->
+  <node name="gazebo_truth_fix" pkg="common_simulations" type="fix_gazebo_truth.py">
+    <param name="robot_name"   value="$(arg robot_name)" />
+  </node>
+  
+  <!--  ****** Navigation Filter *****  -->
+  <group if="$(arg start_filter)">
+    <include file="$(find nono_guidance)/launch/robot_localization_ekf.launch">
+      <arg name="robot_name"   value="$(arg robot_name)" />
+      <arg name="robot_marker" value="$(arg robot_marker)" />
+      <arg name="use_gz_truth" value="$(arg filter_use_gz_truth)" /> 
+    </include>
+    <node name="world_to_map_publisher" pkg="tf" type="static_transform_publisher"
+          args="0 0 0  0 0 0 world map 100"/>
+  </group>
+
+  <!--  ****** Teleop *****  -->
+  <group if="$(arg start_teleop)">
+    <include file="$(eval find(arg('guid_pkg')) + '/launch/teleop.launch')">
+      <arg name="robot_name"   value="$(arg robot_name)" />
+    </include>	
+  </group>
+  
+  <rosparam command="load" file="$(find roverboard_caroline)/config/trr_sim.yaml" />
+  <!--  ****** Lane detection *****  -->
+  <group if="$(arg start_trr_lane_detect)">
+    <node name="trr_vision_lane_node" pkg="two_d_guidance" type="trr_vision_lane_node.py">
+      <param name="cameras" value="$(arg robot_name)/camera_road_front"/>
+      <param name="ref_frame" value="$(arg robot_name)/base_link_footprint"/>
+      <param name="mask_threshold" value="180"/>
+    </node>
+  </group>
+
+  <!--  ****** Fake Lane detection *****  -->
+  <group if="$(arg start_trr_fake_lane_detect)">
+    <node name="trr_vision_fake_lane_node" pkg="two_d_guidance" type="trr_vision_fake_lane_node.py">
+      <param name="robot_name" value="$(arg robot_name)"/>
+      <param name="robot_pose_topic" value="/$(arg robot_name)/base_link_truth1" />
+    </node>
+  </group>
+
+  <!--  ****** Start Finish detection *****  -->
+  <group if="$(arg start_trr_start_finish)">
+    <node name="trr_vision_start_finish_node" pkg="two_d_guidance" type="trr_vision_start_finish_node.py">
+      <param name="cameras" value="$(arg robot_name)/camera_road_front"/>
+      <param name="ref_frame" value="$(arg robot_name)/base_link_footprint"/>
+      <param name="mask_threshold" value="180"/>
+    </node>
+  </group>
+
+  <!--  ****** Traffic Light detection *****  -->
+  <group if="$(arg start_trr_traffic_light)">
+    <node name="trr_vision_traffic_light_node" pkg="two_d_guidance" type="trr_vision_traffic_light_node.py">
+      <param name="cameras" value="$(arg robot_name)/camera_horiz_front"/>
+      <param name="ref_frame" value="$(arg robot_name)/base_link_footprint"/>
+    </node>
+  </group>
+
+  <!--  ****** Maps *****  -->
+  <group if="$(arg start_map)">
+    <node name="map_server" pkg="map_server" type="map_server" args="$(arg map)" output="screen">
+      <param name="frame_id" value="/world"/>
+    </node>
+  </group>
+  
+  <!--  ****** State Estimation *****  -->
+  <group if="$(arg start_trr_state_estimation)">
+    <node name="trr_state_estimator_node" pkg="two_d_guidance" type="trr_state_estimator.py">
+      <remap from="/odom" to="/$(arg robot_name)/diff_drive_controller/odom"/>
+      <param name="k_odom" value="1."/>
+    </node>
+    <node name="trr_state_estimator_display_node" pkg="two_d_guidance" type="trr_state_estimator_display_node.py">
+      <param name="camera" value="$(arg robot_name)/camera_horiz_front"/>
+    </node>
+  </group>
+
+  <!--  ****** Race Manager *****  -->
+  <group if="$(arg start_trr_race_manager)">
+    <node name="race_manager" pkg="trr" type="race_manager.py">
+      <param name="robot_name" value="$(arg robot_name)"/>
+    </node>
+    <node name="race_manager_display" pkg="trr" type="race_manager_display.py" >
+      <param name="robot_name" value="$(arg robot_name)"/>
+    </node>
+  </group>
+  
+  <!--  ****** Guidance *****  -->
+  <group if="$(arg start_trr_guidance)">
+    <node name="trr_guidance_node" pkg="two_d_guidance" type="trr_guidance_node.py" >
+      <param name="ref_frame" value="$(arg robot_name)/base_link_footprint"/>
+      <param name="cmd_topic" value="$(arg robot_name)/diff_drive_controller/cmd_vel"/>
+      <param name="lookahead" value="0.8"/>
+    </node>
+    <node name="trr_guidance_display" pkg="two_d_guidance" type="trr_guidance_display_node.py" >
+      <param name="robot_name" value="$(arg robot_name)"/>
+      <remap from="/odom" to="/$(arg robot_name)/diff_drive_controller/odom"/>
+    </node>
+  </group>
+
+  <!--  ****** World *****  -->
+  <group if="$(arg start_trr_world)">
+    <node name="trr_world_node" pkg="two_d_guidance" type="trr_world_node.py" />
+  </group>
+  
+  <!--  ****** Viz *****  -->
+  <group if="$(arg start_viz)">
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find two_d_guidance)/rviz/follow_line_$(arg robot_name)_sim.rviz" />
+  </group>
+
+ 
+    
+</launch>

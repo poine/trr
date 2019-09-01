@@ -1,10 +1,29 @@
 <?xml version="1.0"?>
 <launch>
   <arg name="robot_name" default="caroline" />
+  <arg name="run_" default="true" />
+  <arg name="run_guidance_display" default="true" />
+  <arg name="run_state_est_display" default="true" />
+  <arg name="run_race_mgr_display" default="true" />
+  
+  <node name="trr_guidance_display" pkg="two_d_guidance" type="trr_guidance_display_node.py" >
+    <param name="robot_name" value="$(arg robot_name)"/>
+    <remap from="/odom" to="/$(arg robot_name)/diff_drive_controller/odom"/>
+  </node>
   
   <node name="trr_state_estimator_display_node" pkg="two_d_guidance" type="trr_state_estimator_display_node.py">
     <param name="camera" value="camera_horiz_front"/>
   </node>
- 
+
+  <node name="race_manager_display" pkg="trr" type="race_manager_display.py" >
+      <param name="robot_name" value="$(arg robot_name)"/>
+  </node>
     
+  <group if="$(arg run_viz)">
+    <node name="rviz" pkg="rviz" type="rviz" required="true"
+          args="-d $(find two_d_guidance)/rviz/follow_line_$(arg robot_name)_real.rviz" />
+  </group>
+
+  
+  
 </launch>
