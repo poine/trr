@@ -57,7 +57,8 @@ class RaceManager:
         self.cur_lap = 0
         self.lap_start_stamp = stamp
         self.lap_times = [0.]
-        car.set_guidance_vel_ctl_mode(1) # profile
+        #car.set_guidance_vel_ctl_mode(1) # profile
+        car.set_guidance_vel_ctl_mode(0) # cst
         car.set_guidance_mode(2) # guidance is driving when racing
 
     def periodic_racing(self, state_est_sub, traffic_light_sub, update_race_mode_cbk, stamp):

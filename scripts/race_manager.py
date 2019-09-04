@@ -23,7 +23,7 @@ class Node(trr_rpu.PeriodicNode):
         # we expose a service to be informed ( by state estimation) when landmarks are passed
         self.lm_service = rospy.Service('LandmarkPassed', two_d_guidance.srv.LandmarkPassed, self.on_landmark_passed)
         # we manipulate parameters exposed by the guidance node
-        guidance_client_name = "trr_guidance"
+        guidance_client_name = "trr_guidance_node"
         self.guidance_cfg_client = dyn_rec_clt.Client(guidance_client_name, timeout=30,
                                                       config_callback=self.guidance_cfg_callback)
         rospy.loginfo(' guidance_client_name: {}'.format(guidance_client_name))
