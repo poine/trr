@@ -25,25 +25,34 @@ def get_points_on_plane(rays, plane_n, plane_d):
     return np.array([-plane_d/np.dot(ray, plane_n)*ray for ray in rays])
 
 class FOVPublisher(trr_rpu.ContourPublisher):
-    def __init__(self, frame_id, cam, topic='trr_vision/lane/fov'):
-        #fov = np.array([(0, 0, 0), (1,0, 0), (1, 1, 0), (0, 1, 0)])
-        y0 = 50
+    def __init__(self, frame_id, cam, topic='trr_vision/lane/fov', bet=None):
+        y0 = 0
         img_corners = np.array([[0., 0+y0], [cam.w, 0+y0], [cam.w, cam.h], [0, cam.h], [0, 0+y0]])
         self.borders_img = np.zeros((0,2))
         for i in range(len(img_corners)-1):
             self.borders_img = np.append(self.borders_img, make_2d_line(img_corners[i], img_corners[i+1], spacing=1, endpoint=True), axis=0)
-        # ideal border of image ( aka undistorted ) in pixels
-        borders_undistorted = cv2.undistortPoints(self.borders_img.reshape((1, -1, 2)), cam.K, cam.D, None, cam.K)
-        # border of image in optical plan
-        borders_cam = [np.dot(cam.invK, [u, v, 1]) for (u, v) in borders_undistorted.squeeze()]
-        # border of image projected on floor plane (in cam frame)
-        #pdb.set_trace()
-        borders_floor_plane_cam = get_points_on_plane(borders_cam, cam.fp_n, cam.fp_d)
-        # border of image projected on floor plane (in world frame)
-        borders_floor_plane_world = np.array([np.dot(cam.cam_to_world_T[:3], p.tolist()+[1]) for p in borders_floor_plane_cam])
+        if 0:
+            #fov = np.array([(0, 0, 0), (1,0, 0), (1, 1, 0), (0, 1, 0)])
+            # ideal border of image ( aka undistorted ) in pixels
+            borders_undistorted = cv2.undistortPoints(self.borders_img.reshape((1, -1, 2)), cam.K, cam.D, None, cam.K)
+            # border of image in optical plan
+            borders_cam = [np.dot(cam.invK, [u, v, 1]) for (u, v) in borders_undistorted.squeeze()]
+            # border of image projected on floor plane (in cam frame)
+            #pdb.set_trace()
+            borders_floor_plane_cam = get_points_on_plane(borders_cam, cam.fp_n, cam.fp_d)
+            #pdb.set_trace()
+            #print max(borders_floor_plane_cam[:,2])
+            in_frustum_idx = np.logical_and(borders_floor_plane_cam[:,2]>0, borders_floor_plane_cam[:,2]<10)
+            borders_floor_plane_cam = borders_floor_plane_cam[in_frustum_idx,:]
+            # border of image projected on floor plane (in world frame)
+            borders_floor_plane_world = np.array([np.dot(cam.cam_to_world_T[:3], p.tolist()+[1]) for p in borders_floor_plane_cam])
+            #db.set_trace()
+            trr_rpu.ContourPublisher.__init__(self, frame_id, topic, borders_floor_plane_world, rgba=(1.,1.,0.,1.))
+        else:
+            trr_rpu.ContourPublisher.__init__(self, frame_id, topic, bet.borders_floor_plane_world, rgba=(1.,1.,0.,1.))
+            #trr_rpu.ContourPublisher.__init__(self, frame_id, topic, bet.borders_isect_be_cam, rgba=(1.,1.,0.,1.))
         
         
-        trr_rpu.ContourPublisher.__init__(self, frame_id, topic, borders_floor_plane_world, rgba=(1.,1.,0.,1.))
 
 
         
@@ -51,14 +60,20 @@ class ImgPublisher(trr_rpu.DebugImgPublisher):
     def __init__(self, img_topic, cam_name):
         trr_rpu.DebugImgPublisher.__init__(self, cam_name, img_topic)
     def _draw(self, img_bgr, model, data):
+        if 1:
+            unwarped_img = model.bet.process(img_bgr)
+            h, w = img_bgr.shape[:2]
+            img_bgr[:,:,:] = trr_vu.change_canvas(unwarped_img, h, w)
+        else:
+            be_area_img = model.fov_pub.borders_img.reshape((1, -1, 2)).astype(np.int)
+            pdb.set_trace()
+            be_area_img = model.bet.va_img.reshape((1, -1, 2)).astype(np.int)
+            cv2.polylines(img_bgr, be_area_img, isClosed=True, color=(0, 0, 255), thickness=2)
+
         y0=20; font_color=(128,0,255)
         f, h1, h2, c, w = cv2.FONT_HERSHEY_SIMPLEX, 1.25, 0.9, font_color, 2
         cv2.putText(img_bgr, 'Lane:', (y0, 40), f, h1, c, w)
-        be_area_img = model.fov_pub.borders_img.reshape((1, -1, 2)).astype(np.int)
-        #pdb.set_trace()
-        be_area_img = model.bet.va_img.reshape((1, -1, 2)).astype(np.int)
-        cv2.polylines(img_bgr, be_area_img, isClosed=True, color=(0, 0, 255), thickness=2)
-
+        
         
    
 #
@@ -80,10 +95,10 @@ class Node(trr_rpu.PeriodicNode):
         # field of view
         self.cam_sys = smocap.rospy_utils.CamSysRetriever().fetch(self.cam_names, fetch_extrinsics=True, world=self.ref_frame)
         self.cam = self.cam_sys.cameras[0]; self.cam.set_undistortion_param(alpha=1.)
-        self.fov_pub = FOVPublisher(self.ref_frame, self.cam, '/trr/vision/lane/fov')
-
-        # image
         self.bet = trr_vu.BirdEyeTransformer(self.cam, be_param)
+        self.fov_pub = FOVPublisher(self.ref_frame, self.cam, '/trr/vision/lane/fov', self.bet)
+
+        # we publish an image
         self.img_pub = ImgPublisher("/trr/vision/lane/image_debug2", self.cam_names[0])
         
         self.lane_model_sub = trr_rpu.LaneModelSubscriber('/trr_vision/lane/detected_model')

@@ -14,12 +14,16 @@ def make_z_room_path(res=0.01):
    circle1 = tdg.make_circle_path(c1, -r, np.pi/2, np.pi, res=res)
    x2, y2 = 1.581, -0.35
    line2 = tdg.make_line_path([x1, -r], [x2, -r], res=0.01)
+
    c2, r2, th2 = [x2, y2], 0.9, np.deg2rad(61.8)
-   circle2 = tdg.make_circle_path(c2, r2, -np.pi/2, -th2, res=res)
+   circle2 = tdg.make_circle_path(c2, -r2, -np.pi/2, th2, res=res)
+
    c3, r3 = [0, -1.21], 0.9
    circle3 = tdg.make_circle_path(c3, r3, np.pi/2-th2, 2*th2, res=res)
+
    c4, r4 = [-x2, y2], 0.9
-   circle4 = tdg.make_circle_path(c4, r4, -(np.pi/2-th2), -th2, res=res)
+   circle4 = tdg.make_circle_path(c4, -r4, -(np.pi/2-th2), th2, res=res)
+      
    line3 = tdg.make_line_path([-x2, -r], [-x1, -r], res=res)
    circle5 = tdg.make_circle_path([-x1, 0], -r, -np.pi/2, np.pi, res=res)
    line4 = tdg.make_line_path([-x1, r], [x0, r], res=res)
@@ -29,6 +33,50 @@ def make_z_room_path(res=0.01):
    fname = os.path.join(tdg_dir, 'paths/demo_z/track_trr_real.npz')
    p.save(fname)
    return fname, p
+
+def make_vedrines_path(res=0.01):
+   lw = 1.5              # lane width
+   x0, x1 = 0., 22.5  
+   c1, r1 = [x1,0], 1.75
+   line1 = tdg.make_line_path([x0, r1], [x1, r1], res=res)
+   circle1 = tdg.make_circle_path(c1, -r1, np.pi/2, np.pi, res=res)
+
+   d1 = 3.83
+   r2 = 2
+   x2, y2 = 2*d1, r2-r1
+   line2 = tdg.make_line_path([x1, -r1], [x2, -r1], res=0.01)
+
+   c2, th2 = [x2, y2], np.deg2rad(51.1)  # 51 < th2 < 51.15
+   circle2 = tdg.make_circle_path(c2, -r2, -np.pi/2, th2, res=res)
+
+   r3 = 2.927
+   x3, y3 = d1, -r1-1.1
+   c3, th3, dth3 = [x3, y3], np.pi/2-th2, 2*th2
+   circle3 = tdg.make_circle_path(c3, r3, th3, dth3, res=res)
+
+   r4, c4, th4, dth4 = r2, [0, y2], -np.pi/2+th2, 2*th2
+   circle4 = tdg.make_circle_path(c4, -r4, th4, dth4, res=res)
+
+   r5, c5, th5, dth5 = r3, [-x3, y3], th3, dth3
+   circle5 = tdg.make_circle_path(c5, r5, th5, dth5, res=res)
+
+   r6, c6, th6, dth6 = r2, [-x2, y2], -np.pi/2+th2, th2
+   circle6 = tdg.make_circle_path(c6, -r6, th6, dth6, res=res)
+
+   line3 = tdg.make_line_path([-x2, -r1], [-x1, -r1], res=0.01)
+
+   r7, c7, th7, dth7 = r1, [-x1, 0], -np.pi/2, np.pi
+   circle7 = tdg.make_circle_path(c7, -r7, th7, dth7, res=res)
+
+   line4 = tdg.make_line_path([-x1, r1], [-x0, r1], res=res)
+   
+   line1.append([circle1, line2, circle2, circle3, circle4, circle5, circle6, line3, circle7, line4])
+   p = line1
+   tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
+   fname = os.path.join(tdg_dir, 'paths/vedrines/track_trr.npz')
+   p.save(fname)
+   return fname, p
+
 
 def filter(vel_sps, omega=3., phi=50):
    ref = tdg.utils.SecOrdLinRef(omega=omega, xi=0.9)
@@ -73,6 +121,7 @@ def make_curvature_based_vel_profile(fname, v0=1.75, kc=0.75, _plot=False):
    
 
 def make_custom_vel_profile(path, _plot=True):
+   # print indices with curvature discontinuity
    for i, (c1, c2) in enumerate(zip(path.curvatures[:-1], path.curvatures[1:])):
       if c1 != c2: print i, c1, c2
    print len(path.curvatures)
@@ -122,13 +171,15 @@ def make_custom_vel_profile(path, _plot=True):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     np.set_printoptions(linewidth=300, suppress=True)
-    fname, p = make_z_room_path()
-    p2 = make_curvature_based_vel_profile(fname)
-    make_custom_vel_profile(p2)
-    #tdg.draw_path(plt.gcf(), plt.gca(), p)
-    #plt.figure()
-    tdg.draw_path_curvature(plt.gcf(), plt.gca(), p)
+    #fname, p = make_z_room_path()
+    fname, p = make_vedrines_path()
+    if 0:
+       p2 = make_curvature_based_vel_profile(fname)
+       make_custom_vel_profile(p2)
+       plt.figure()
+       tdg.draw_path_vel(plt.gcf(), plt.gca(), p2)
+    tdg.draw_path(plt.gcf(), plt.gca(), p)
     plt.figure()
-    tdg.draw_path_vel(plt.gcf(), plt.gca(), p2)
+    tdg.draw_path_curvature(plt.gcf(), plt.gca(), p)
     plt.show()
 

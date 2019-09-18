@@ -66,8 +66,9 @@
   <!--  ****** Lane detection *****  -->
   <group if="$(arg start_trr_lane_detect)">
     <node name="trr_vision_lane_node" pkg="two_d_guidance" type="trr_vision_lane_node.py">
-      <param name="cameras" value="$(arg robot_name)/camera_road_front"/>
-      <param name="ref_frame" value="$(arg robot_name)/base_link_footprint"/>
+      <param name="robot_name"     value="$(arg robot_name)" />
+      <param name="cameras"        value="$(arg robot_name)/camera_road_front"/>
+      <param name="ref_frame"      value="$(arg robot_name)/base_link_footprint"/>
       <param name="mask_threshold" value="180"/>
     </node>
   </group>
@@ -83,6 +84,7 @@
   <!--  ****** Start Finish detection *****  -->
   <group if="$(arg start_trr_start_finish)">
     <node name="trr_vision_start_finish_node" pkg="two_d_guidance" type="trr_vision_start_finish_node.py">
+      <param name="robot_name"     value="$(arg robot_name)" />
       <param name="cameras" value="$(arg robot_name)/camera_road_front"/>
       <param name="ref_frame" value="$(arg robot_name)/base_link_footprint"/>
       <param name="mask_threshold" value="180"/>
