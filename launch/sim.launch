@@ -4,6 +4,9 @@
   <arg name="start_gazebo_gui" default="true" />
   <arg name="start_filter" default="false" />
   <arg name="start_teleop" default="true" />
+
+  <arg name="trr_config" default="zroom" />
+  
   <arg name="start_trr_lane_detect" default="true" />
   <arg name="start_trr_fake_lane_detect" default="false" />
   <arg name="start_trr_start_finish" default="true" />
@@ -43,6 +46,13 @@
   <node name="gazebo_truth_fix" pkg="common_simulations" type="fix_gazebo_truth.py">
     <param name="robot_name"   value="$(arg robot_name)" />
   </node>
+
+
+  <!--  ****** Load configuration *****  -->
+  <!-- load parameters in the parameter server --> 
+  <rosparam command="load" file="$(find roverboard_christine)/config/trr_$(arg trr_config).yaml" />
+
+
   
   <!--  ****** Navigation Filter *****  -->
   <group if="$(arg start_filter)">

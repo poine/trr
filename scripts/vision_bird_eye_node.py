@@ -3,7 +3,7 @@
 import sys, numpy as np, rospy
 import cv2
 
-import two_d_guidance.trr.rospy_utils as trr_rpu
+import two_d_guidance.trr.rospy_utils  as trr_rpu
 import two_d_guidance.trr.vision.utils as trr_vu
 
 class BirdEyePipeline(trr_vu.Pipeline):
@@ -32,7 +32,7 @@ class Node(trr_rpu.TrrSimpleVisionPipeNode):
         return self.pipeline.img
 
 def main(args):
-    name = 'trr_vision_lane_node'
+    name = 'trr_vision_bird_eye_node'
     rospy.init_node(name)
     rospy.loginfo('{} starting'.format(name))
     rospy.loginfo('  using opencv version {}'.format(cv2.__version__))
