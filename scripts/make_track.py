@@ -32,9 +32,20 @@ def make_z_room_path(res=0.01):
    tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
    fname = os.path.join(tdg_dir, 'paths/demo_z/track_trr_real.npz')
    p.save(fname)
+
+   # add landmarks and velocity profile
+   p1 =  trr_u.TrrPath(fname, v=1.)
+   p1.lm_s = [p.dists[-1]-1.21, 0.86]
+
+   s_l1 = slice(0, 225)
+   p1.vels[s_l1] = 2.
+   
+   p1.save(fname)
+   
    return fname, p
 
 def make_vedrines_path(res=0.01):
+   # origin of path is at the center of the long straight line
    lw = 1.5              # lane width
    x0, x1 = 0., 22.5  
    c1, r1 = [x1,0], 1.75
@@ -75,6 +86,15 @@ def make_vedrines_path(res=0.01):
    tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
    fname = os.path.join(tdg_dir, 'paths/vedrines/track_trr.npz')
    p.save(fname)
+
+   # add landmarks and velocity profile
+   p1 =  trr_u.TrrPath(fname, v=1.)
+   make_vedrines_vel_profile(p1)
+   p1.lm_s = [0., 16.66]
+   p1.report()
+   p1.save(fname)
+
+
    return fname, p
 
 
@@ -120,6 +140,22 @@ def make_curvature_based_vel_profile(fname, v0=1.75, kc=0.75, _plot=False):
    return p2
    
 
+def make_vedrines_vel_profile(path, _plot=True):
+   print('building velocity profile')
+   discs = []
+   for i, (c1, c2) in enumerate(zip(path.curvatures[:-1], path.curvatures[1:])):
+      if c1 != c2: discs.append((i, c1, c2))
+   print(' discontinuities ({}): {}'.format(len(discs), discs))
+   vels = [3, 2, 3, 1, 1, 1, 1, 1, 3, 2, 3]
+   idx_vel = 0
+   vel_sps = np.zeros(len(path.points))
+   for i in range(len(vel_sps)):
+      vel_sps[i] = vels[idx_vel]
+      if idx_vel<len(discs) and i == discs[idx_vel][0]:
+         print i, idx_vel
+         idx_vel+=1
+
+   
 def make_custom_vel_profile(path, _plot=True):
    # print indices with curvature discontinuity
    for i, (c1, c2) in enumerate(zip(path.curvatures[:-1], path.curvatures[1:])):
@@ -168,18 +204,29 @@ def make_custom_vel_profile(path, _plot=True):
       plt.plot(path.time)
       plt.show()
 
+
+def plot_vedrines():
+   tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
+   fname = os.path.join(tdg_dir, 'paths/vedrines/track_trr.npz')
+   _p =  trr_u.TrrPath(fname)
+   tdg.draw_path_vel(plt.gcf(), plt.gca(), _p)
+      
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    np.set_printoptions(linewidth=300, suppress=True)
-    #fname, p = make_z_room_path()
-    fname, p = make_vedrines_path()
-    if 0:
-       p2 = make_curvature_based_vel_profile(fname)
-       make_custom_vel_profile(p2)
-       plt.figure()
-       tdg.draw_path_vel(plt.gcf(), plt.gca(), p2)
-    tdg.draw_path(plt.gcf(), plt.gca(), p)
-    plt.figure()
-    tdg.draw_path_curvature(plt.gcf(), plt.gca(), p)
-    plt.show()
+   logging.basicConfig(level=logging.INFO)
+   np.set_printoptions(linewidth=300, suppress=True)
+   #fname, p = make_z_room_path()
+   fname, p = make_vedrines_path()
+   if 0:
+      plot_vedrines()
+      plt.show()
+   if 0:
+      p2 = make_curvature_based_vel_profile(fname)
+      make_custom_vel_profile(p2)
+   if 0:
+      plt.figure()
+      tdg.draw_path_vel(plt.gcf(), plt.gca(), p2)
+      tdg.draw_path(plt.gcf(), plt.gca(), p)
+      plt.figure()
+      tdg.draw_path_curvature(plt.gcf(), plt.gca(), p)
+      plt.show()
 
