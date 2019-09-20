@@ -6,6 +6,11 @@ import two_d_guidance as tdg
 import two_d_guidance.trr.utils as trr_u
 import pdb
 
+
+#
+#  Horizontal shapes
+#
+
 def make_z_room_path(res=0.01):
    #x0, x1 = -0.75, 2.25
    x0, x1 = 0., 2.25  # moved start of path to center
@@ -35,8 +40,7 @@ def make_z_room_path(res=0.01):
 
    # add landmarks and velocity profile
    p1 =  trr_u.TrrPath(fname, v=1.)
-   p1.lm_s = [p.dists[-1]-1.21, 0.86]
-
+   p1.lm_s = [p.dists[-1]-1.21, 0.86] # start and finish are located -1.21 and 0.86 from path origin
    s_l1 = slice(0, 225)
    p1.vels[s_l1] = 2.
    
@@ -46,9 +50,9 @@ def make_z_room_path(res=0.01):
 
 def make_vedrines_path(res=0.01):
    # origin of path is at the center of the long straight line
-   lw = 1.5              # lane width
-   x0, x1 = 0., 22.5  
-   c1, r1 = [x1,0], 1.75
+   lw = 1.5                # lane width
+   x0, x1 = 0., 22.5       # start and end of first line (step0)
+   c1, r1 = [x1,0], 1.75   # center and radius of first circle (step1)
    line1 = tdg.make_line_path([x0, r1], [x1, r1], res=res)
    circle1 = tdg.make_circle_path(c1, -r1, np.pi/2, np.pi, res=res)
 
@@ -89,15 +93,17 @@ def make_vedrines_path(res=0.01):
 
    # add landmarks and velocity profile
    p1 =  trr_u.TrrPath(fname, v=1.)
+   p1.lm_s = [0., 16.66] # start and finish are located 0 and 16.66 from path origin
    make_vedrines_vel_profile(p1)
-   p1.lm_s = [0., 16.66]
    p1.report()
    p1.save(fname)
 
 
    return fname, p
 
-
+#
+# Velocity profile
+#
 def filter(vel_sps, omega=3., phi=50):
    ref = tdg.utils.SecOrdLinRef(omega=omega, xi=0.9)
    out = np.zeros((len(vel_sps), 3))
@@ -140,8 +146,32 @@ def make_curvature_based_vel_profile(fname, v0=1.75, kc=0.75, _plot=False):
    return p2
    
 
+
+def _saturate_vel(path, a_max):
+   path.time = np.zeros(len(path.points))
+   for i in range(1, len(path.time)):
+      dist = path.dists[i]-path.dists[i-1]
+      dt = dist/path.vels[i-1]
+      path.time[i] = path.time[i-1] + dt
+      dv = path.vels[i] - path.vels[i-1]
+      a = min(a_max, dv/dt) if dv>=0 else max(-a_max, dv/dt)
+      path.vels[i] = path.vels[i-1] + a*dt
+
+
+def _compute_time(path):
+   # integrate velocity
+   path.time = np.zeros(len(path.points))
+   for i in range(1, len(path.time)):
+      d = path.dists[i]-path.dists[i-1]
+      path.time[i] = path.time[i-1] + d/path.vels[i-1]
+   print('lap time: {:.2f}s'.format(path.time[-1]))
+
+
+   
 def make_vedrines_vel_profile(path, _plot=True):
    print('building velocity profile')
+   # path is comprised of (first order) discontinuous lines and circles.
+   # record transitions
    discs = []
    for i, (c1, c2) in enumerate(zip(path.curvatures[:-1], path.curvatures[1:])):
       if c1 != c2: discs.append((i, c1, c2))
@@ -150,11 +180,17 @@ def make_vedrines_vel_profile(path, _plot=True):
    idx_vel = 0
    vel_sps = np.zeros(len(path.points))
    for i in range(len(vel_sps)):
-      vel_sps[i] = vels[idx_vel]
-      if idx_vel<len(discs) and i == discs[idx_vel][0]:
-         print i, idx_vel
-         idx_vel+=1
+      vel_sps[i] = path.vels[i] = vels[idx_vel]
+      if idx_vel<len(discs) and i == discs[idx_vel][0]: idx_vel+=1
+   _saturate_vel(path, 1.)
+   
+   if 0: # filter
+      fltrd, delayed_curv = filter(vel_sps, omega=4., phi=100)
+      path.vels = fltrd[:,0]
+      path.accels = fltrd[:,1]
+      path.jerks = fltrd[:,2]
 
+   _compute_time(path)
    
 def make_custom_vel_profile(path, _plot=True):
    # print indices with curvature discontinuity
@@ -190,6 +226,7 @@ def make_custom_vel_profile(path, _plot=True):
    tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
    fname = os.path.join(tdg_dir, 'paths/demo_z/track_trr_real_vel_1.npz')
    path.save(fname)
+
    if _plot:
       plt.title('custom vel profile')
       plt.subplot(3,1,1)
@@ -210,13 +247,15 @@ def plot_vedrines():
    fname = os.path.join(tdg_dir, 'paths/vedrines/track_trr.npz')
    _p =  trr_u.TrrPath(fname)
    tdg.draw_path_vel(plt.gcf(), plt.gca(), _p)
-      
+   plt.figure()
+   tdg.draw_path(plt.gcf(), plt.gca(), _p)
+   
 if __name__ == '__main__':
    logging.basicConfig(level=logging.INFO)
    np.set_printoptions(linewidth=300, suppress=True)
    #fname, p = make_z_room_path()
    fname, p = make_vedrines_path()
-   if 0:
+   if 1:
       plot_vedrines()
       plt.show()
    if 0:
