@@ -73,6 +73,7 @@
   </group>
   
   <rosparam command="load" file="$(find roverboard_caroline)/config/trr_sim.yaml" />
+  
   <!--  ****** Lane detection *****  -->
   <group if="$(arg start_trr_lane_detect)">
     <node name="trr_vision_lane_node" pkg="two_d_guidance" type="trr_vision_lane_node.py">
@@ -142,7 +143,6 @@
     <node name="trr_guidance_node" pkg="two_d_guidance" type="trr_guidance_node.py" >
       <param name="ref_frame" value="$(arg robot_name)/base_link_footprint"/>
       <param name="cmd_topic" value="$(arg robot_name)/diff_drive_controller/cmd_vel"/>
-      <param name="lookahead" value="0.8"/>
     </node>
     <node name="trr_guidance_display" pkg="two_d_guidance" type="trr_guidance_display_node.py" >
       <param name="robot_name" value="$(arg robot_name)"/>

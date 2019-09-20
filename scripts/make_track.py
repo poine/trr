@@ -41,12 +41,14 @@ def make_z_room_path(res=0.01):
    # add landmarks and velocity profile
    p1 =  trr_u.TrrPath(fname, v=1.)
    p1.lm_s = [p.dists[-1]-1.21, 0.86] # start and finish are located -1.21 and 0.86 from path origin
-   s_l1 = slice(0, 225)
-   p1.vels[s_l1] = 2.
-   
+   #s_l1 = slice(0, 225)
+   #p1.vels[s_l1] = 2.
+   vel_prof_id = 3
+   make_zroom_vel_profile(p1, _plot=True, idx=vel_prof_id)
+   fname = os.path.join(tdg_dir, 'paths/demo_z/track_trr_sim_{}.npz'.format(vel_prof_id))
    p1.save(fname)
    
-   return fname, p
+   return fname, p1
 
 def make_vedrines_path(res=0.01):
    # origin of path is at the center of the long straight line
@@ -93,8 +95,8 @@ def make_vedrines_path(res=0.01):
 
    # add landmarks and velocity profile
    p1 =  trr_u.TrrPath(fname, v=1.)
-   p1.lm_s = [0., 16.66] # start and finish are located 0 and 16.66 from path origin
-   make_vedrines_vel_profile(p1)
+   p1.lm_s = [0., 16.66] # start and finish are located at 0 and 16.66 m from path origin
+   make_vedrines_vel_profile(p1, idx=0)
    p1.report()
    p1.save(fname)
 
@@ -147,6 +149,13 @@ def make_curvature_based_vel_profile(fname, v0=1.75, kc=0.75, _plot=False):
    
 
 
+def find_curvature_jumps(path):
+   discs = []
+   for i, (c1, c2) in enumerate(zip(path.curvatures[:-1], path.curvatures[1:])):
+      if c1 != c2: discs.append((i, c1, c2))
+   print(' discontinuities ({}): {}'.format(len(discs), discs))
+   return discs
+
 def _saturate_vel(path, a_max):
    path.time = np.zeros(len(path.points))
    for i in range(1, len(path.time)):
@@ -154,9 +163,11 @@ def _saturate_vel(path, a_max):
       dt = dist/path.vels[i-1]
       path.time[i] = path.time[i-1] + dt
       dv = path.vels[i] - path.vels[i-1]
-      a = min(a_max, dv/dt) if dv>=0 else max(-a_max, dv/dt)
-      path.vels[i] = path.vels[i-1] + a*dt
-
+      if dt > 0:
+         a = min(a_max, dv/dt) if dv>=0 else max(-a_max, dv/dt)
+         path.vels[i] = path.vels[i-1] + a*dt
+      else:
+         path.vels[i] = path.vels[i-1]
 
 def _compute_time(path):
    # integrate velocity
@@ -167,67 +178,56 @@ def _compute_time(path):
    print('lap time: {:.2f}s'.format(path.time[-1]))
 
 
-   
+def _set_piecewise_setpoints(discs, vels, path):
+   idx_vel = 0
+   vel_sps = np.zeros(len(path.points))
+   for i in range(len(vel_sps)):
+      vel_sps[i] = vels[idx_vel]
+      if idx_vel<len(discs) and i == discs[idx_vel][0]: idx_vel+=1
+   return vel_sps
+
+
 def make_vedrines_vel_profile(path, _plot=True):
    print('building velocity profile')
    # path is comprised of (first order) discontinuous lines and circles.
    # record transitions
-   discs = []
-   for i, (c1, c2) in enumerate(zip(path.curvatures[:-1], path.curvatures[1:])):
-      if c1 != c2: discs.append((i, c1, c2))
-   print(' discontinuities ({}): {}'.format(len(discs), discs))
+   discs = find_curvature_jumps(path)
    vels = [3, 2, 3, 1, 1, 1, 1, 1, 3, 2, 3]
-   idx_vel = 0
-   vel_sps = np.zeros(len(path.points))
-   for i in range(len(vel_sps)):
-      vel_sps[i] = path.vels[i] = vels[idx_vel]
-      if idx_vel<len(discs) and i == discs[idx_vel][0]: idx_vel+=1
-   _saturate_vel(path, 1.)
-   
-   if 0: # filter
-      fltrd, delayed_curv = filter(vel_sps, omega=4., phi=100)
+   vel_sps = _set_piecewise_setpoints(discs, vels, path)
+   path.vels = vel_sps
+   if 1:
+      _saturate_vel(path, a_max=2.)
+   if 1: # filter
+      fltrd, delayed_curv = filter(path.vels, omega=4., phi=100)
       path.vels = fltrd[:,0]
       path.accels = fltrd[:,1]
       path.jerks = fltrd[:,2]
 
    _compute_time(path)
-   
-def make_custom_vel_profile(path, _plot=True):
-   # print indices with curvature discontinuity
-   for i, (c1, c2) in enumerate(zip(path.curvatures[:-1], path.curvatures[1:])):
-      if c1 != c2: print i, c1, c2
-   print len(path.curvatures)
-   vel_sps = np.zeros(len(path.points))
-   s_l1 = slice(0, 225)
-   s_c1 = slice(225, 617)
-   s_l2 = slice(617, 683)
-   s_c2c3c4 = slice(683, 1071)
-   s_l3 = slice(1071, 1137)
-   s_c5 = slice(1137, 1529)
-   s_l4 = slice(1529, 1754)
-   v1, v2, v3, v4 = 2.25, 1.8, 1.4, 0.9# works with lookahead time at 0.5
-   #v1, v2, v3, v4 = 1., 1., 1., 1.
-   vel_sps[s_l1] = v1
-   vel_sps[s_c1] = v2
-   vel_sps[s_l2] = v3
-   vel_sps[s_c2c3c4] = v4
-   vel_sps[s_l3] = v3
-   vel_sps[s_c5] = v2
-   vel_sps[s_l4] = v1
-   fltrd, delayed_curv = filter(vel_sps, omega=4., phi=100)
+
+
+def make_zroom_vel_profile(path, _plot=True, idx=0):
+   print('building velocity profile for zroom')
+   discs = find_curvature_jumps(path)
+   vels = [[1., 1., 1., 1., 1., 1., 1., 1., 1.], 
+           [1.2, 1., 1., 1., 1., 1., 1., 1., 1.2],
+           [1.4, 1.2, 1.1, 1., 1., 1., 1.1, 1.2, 1.4],
+           [1.5, 1.3, 1.2, 1.1, 1.1, 1.1, 1.2, 1.3, 1.5],
+           [2.25, 1.8, 1.4, 0.9, 0.9, 0.9, 1.4, 1.8, 2.25]]
+   vel_sps = _set_piecewise_setpoints(discs, vels[idx], path)
+   path.vels = vel_sps
+   _compute_time(path)
+   _saturate_vel(path, a_max=2.)
+   _compute_time(path)
+   fltrd, delayed_curv = filter(path.vels, omega=4., phi=100)
    path.vels = fltrd[:,0]
    path.accels = fltrd[:,1]
    path.jerks = fltrd[:,2]
-   path.time = np.zeros(len(path.points))
-   for i in range(1, len(path.time)):
-      d = path.dists[i]-path.dists[i-1]
-      path.time[i] = path.time[i-1] + d/path.vels[i-1]
-   print('lap time: {:.2f}s'.format(path.time[-1]))
-   tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
-   fname = os.path.join(tdg_dir, 'paths/demo_z/track_trr_real_vel_1.npz')
-   path.save(fname)
+   _compute_time(path)
 
-   if _plot:
+   
+def make_custom_vel_profile(path, _plot=True):
+    if _plot:
       plt.title('custom vel profile')
       plt.subplot(3,1,1)
       plt.plot(fltrd[:,0])
@@ -245,7 +245,9 @@ def make_custom_vel_profile(path, _plot=True):
 def plot_vedrines():
    tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
    fname = os.path.join(tdg_dir, 'paths/vedrines/track_trr.npz')
-   _p =  trr_u.TrrPath(fname)
+   plot_path(trr_u.TrrPath(fname))
+   
+def plot_path(_p):
    tdg.draw_path_vel(plt.gcf(), plt.gca(), _p)
    plt.figure()
    tdg.draw_path(plt.gcf(), plt.gca(), _p)
@@ -253,9 +255,12 @@ def plot_vedrines():
 if __name__ == '__main__':
    logging.basicConfig(level=logging.INFO)
    np.set_printoptions(linewidth=300, suppress=True)
-   #fname, p = make_z_room_path()
-   fname, p = make_vedrines_path()
+   fname, p = make_z_room_path()
+   #fname, p = make_vedrines_path()
    if 1:
+      plot_path(p)
+      plt.show()
+   if 0:
       plot_vedrines()
       plt.show()
    if 0:

@@ -39,7 +39,7 @@ class Node(trr_rpu.PeriodicNode):
 
     def on_landmark_passed(self, req):
         print('on_landmark_passed {}'.format(req.id))
-        if req.id == 1: # FIXME.... path need to be visible
+        if req.id == trr_u.TrrPath.LM_FINISH:
             self.race_manager.next_lap(rospy.Time.now())
         return two_d_guidance.srv.LandmarkPassedResponse(0)
         
