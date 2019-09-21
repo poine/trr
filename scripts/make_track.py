@@ -34,17 +34,24 @@ def make_z_room_path(res=0.01):
    line4 = tdg.make_line_path([-x1, r], [x0, r], res=res)
    line1.append([circle1, line2, circle2, circle3, circle4, line3, circle5, line4])
    p = line1
-   tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
-   fname = os.path.join(tdg_dir, 'paths/demo_z/track_trr_real.npz')
+   fname = '/tmp/path_tmp.npz'
    p.save(fname)
 
    # add landmarks and velocity profile
    p1 =  trr_u.TrrPath(fname, v=1.)
    p1.lm_s = [p.dists[-1]-1.21, 0.86] # start and finish are located -1.21 and 0.86 from path origin
-   #s_l1 = slice(0, 225)
-   #p1.vels[s_l1] = 2.
-   vel_prof_id = 3
-   make_zroom_vel_profile(p1, _plot=True, idx=vel_prof_id)
+   
+   vel_prof_id = 5
+   vels = [[1., 1., 1., 1., 1., 1., 1., 1., 1.], 
+           [1.2, 1., 1., 1., 1., 1., 1., 1., 1.2],
+           [1.4, 1.2, 1.1, 1., 1., 1., 1.1, 1.2, 1.4],
+           [1.5, 1.3, 1.2, 1.0, 1.0, 1.0, 1.2, 1.3, 1.5],
+           [1.75, 1.4, 1.2, 1.0, 1.0, 1.0, 1.2, 1.4, 1.75],
+           [2.0, 1.4, 1.4, 1., 1., 1., 1.4, 1.4, 2.0]]
+
+   make_vel_profile(p1, vels[vel_prof_id], a_max=0, omega_ref=5.5, braking_delay=100)
+   p1.report()
+   tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
    fname = os.path.join(tdg_dir, 'paths/demo_z/track_trr_sim_{}.npz'.format(vel_prof_id))
    p1.save(fname)
    
@@ -89,41 +96,41 @@ def make_vedrines_path(res=0.01):
    
    line1.append([circle1, line2, circle2, circle3, circle4, circle5, circle6, line3, circle7, line4])
    p = line1
-   tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
-   fname = os.path.join(tdg_dir, 'paths/vedrines/track_trr.npz')
+ 
+   fname = '/tmp/path_tmp.npz'
    p.save(fname)
 
    # add landmarks and velocity profile
    p1 =  trr_u.TrrPath(fname, v=1.)
    p1.lm_s = [0., 16.66] # start and finish are located at 0 and 16.66 m from path origin
-   make_vedrines_vel_profile(p1, idx=0)
+   idx_velp = 3
+   vels = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+           [3, 2, 3, 1, 1, 1, 1, 1, 3, 2, 3],
+           [5, 2, 5, 1.5, 1.5, 1.5, 1.5, 1.5, 5, 2, 5],
+           [6, 2, 6, 1.5, 1.5, 1.5, 1.5, 1.5, 6, 2, 6]]
+   make_vel_profile(p1, vels[idx_velp], a_max=0, omega_ref=3., braking_delay=100)
    p1.report()
+   tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
+   fname = os.path.join(tdg_dir, 'paths/vedrines/track_trr_{}.npz'.format(idx_velp))
    p1.save(fname)
 
-
-   return fname, p
+   return fname, p1
 
 #
 # Velocity profile
 #
-def filter(vel_sps, omega=3., phi=50):
-   ref = tdg.utils.SecOrdLinRef(omega=omega, xi=0.9)
+def filter(vel_sps, omega=3., xi=0.9):
+   ref = tdg.utils.SecOrdLinRef(omega=omega, xi=xi)
    out = np.zeros((len(vel_sps), 3))
    dt = 0.01 #WTF...
-   # time shift
-   ts_lim = 800
-   vel_sps2 = np.zeros(len(vel_sps))
-   vel_sps2[:ts_lim] = vel_sps[phi:ts_lim+phi]
-   vel_sps2[ts_lim:] = vel_sps[ts_lim:]
-   #vel_sps2[:ts_lim+phi] = vel_sps[phi:ts_lim+phi]
-   #vel_sps2[-phi:] = vel_sps[-phi] # cst....
    # run ref
-   out[0, 0] = vel_sps2[0]; ref.reset(out[0])
+   out[0, 0] = vel_sps[0]; ref.reset(out[0])
    for i in range(1,len(vel_sps)):
-      out[i] = ref.run(dt, vel_sps2[i])
-   return out, vel_sps2
+      out[i] = ref.run(dt, vel_sps[i])
+   return out
 
 # velocity profile proportional to path curvature
+# (for reference)
 def make_curvature_based_vel_profile(fname, v0=1.75, kc=0.75, _plot=False):
    tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
    fname = os.path.join(tdg_dir, 'paths/demo_z/track_trr_real.npz')
@@ -187,59 +194,28 @@ def _set_piecewise_setpoints(discs, vels, path):
    return vel_sps
 
 
-def make_vedrines_vel_profile(path, _plot=True):
+def make_vel_profile(path, vels, a_max, omega_ref=3, braking_delay=100):
    print('building velocity profile')
    # path is comprised of (first order) discontinuous lines and circles.
    # record transitions
    discs = find_curvature_jumps(path)
-   vels = [3, 2, 3, 1, 1, 1, 1, 1, 3, 2, 3]
+   # make a piecewise constant velocity profile
    vel_sps = _set_piecewise_setpoints(discs, vels, path)
    path.vels = vel_sps
-   if 1:
-      _saturate_vel(path, a_max=2.)
-   if 1: # filter
-      fltrd, delayed_curv = filter(path.vels, omega=4., phi=100)
+   # saturation... not so much....
+   if a_max>0:
+      _saturate_vel(path, a_max=a_max)
+   # anticipate braking
+   for i, disc in enumerate(discs):
+      if vels[i] > vels[i+1]: 
+         path.vels[disc[0]-braking_delay:disc[0]] = vels[i+1]
+   if 1: # reference model
+      fltrd = filter(path.vels, omega=omega_ref)
       path.vels = fltrd[:,0]
       path.accels = fltrd[:,1]
       path.jerks = fltrd[:,2]
 
    _compute_time(path)
-
-
-def make_zroom_vel_profile(path, _plot=True, idx=0):
-   print('building velocity profile for zroom')
-   discs = find_curvature_jumps(path)
-   vels = [[1., 1., 1., 1., 1., 1., 1., 1., 1.], 
-           [1.2, 1., 1., 1., 1., 1., 1., 1., 1.2],
-           [1.4, 1.2, 1.1, 1., 1., 1., 1.1, 1.2, 1.4],
-           [1.5, 1.3, 1.2, 1.1, 1.1, 1.1, 1.2, 1.3, 1.5],
-           [2.25, 1.8, 1.4, 0.9, 0.9, 0.9, 1.4, 1.8, 2.25]]
-   vel_sps = _set_piecewise_setpoints(discs, vels[idx], path)
-   path.vels = vel_sps
-   _compute_time(path)
-   _saturate_vel(path, a_max=2.)
-   _compute_time(path)
-   fltrd, delayed_curv = filter(path.vels, omega=4., phi=100)
-   path.vels = fltrd[:,0]
-   path.accels = fltrd[:,1]
-   path.jerks = fltrd[:,2]
-   _compute_time(path)
-
-   
-def make_custom_vel_profile(path, _plot=True):
-    if _plot:
-      plt.title('custom vel profile')
-      plt.subplot(3,1,1)
-      plt.plot(fltrd[:,0])
-      plt.plot(delayed_curv, alpha=0.5)
-      plt.plot(vel_sps)
-      plt.subplot(3,1,2)
-      plt.plot(fltrd[:,1])
-      plt.subplot(3,1,3)
-      plt.plot(fltrd[:,2])
-      plt.figure()
-      plt.plot(path.time)
-      plt.show()
 
 
 def plot_vedrines():
@@ -248,9 +224,20 @@ def plot_vedrines():
    plot_path(trr_u.TrrPath(fname))
    
 def plot_path(_p):
-   tdg.draw_path_vel(plt.gcf(), plt.gca(), _p)
+   #tdg.draw_path_curvature(plt.gcf(), plt.gca(), p)
+   #tdg.draw_path_vel(plt.gcf(), plt.gca(), _p)
+   #tdg.draw_path_accel(plt.gcf(), plt.gca(), _p)
+   tdg.draw_path_vel_profile(plt.gcf(), _p)
+   #plt.figure()
+   #tdg.draw_path(plt.gcf(), plt.gca(), _p)
    plt.figure()
-   tdg.draw_path(plt.gcf(), plt.gca(), _p)
+   ax1 = plt.subplot(3,1,1)
+   tdg.draw_path_vel_2D(plt.gcf(), ax1, _p)
+   ax2 = plt.subplot(3,1,2)
+   tdg.draw_path_accel_2D(plt.gcf(), ax2, _p)
+   ax3 = plt.subplot(3,1,3)
+   tdg.draw_path_lat_accel_2D(plt.gcf(), ax3, _p)
+
    
 if __name__ == '__main__':
    logging.basicConfig(level=logging.INFO)
@@ -265,12 +252,4 @@ if __name__ == '__main__':
       plt.show()
    if 0:
       p2 = make_curvature_based_vel_profile(fname)
-      make_custom_vel_profile(p2)
-   if 0:
-      plt.figure()
-      tdg.draw_path_vel(plt.gcf(), plt.gca(), p2)
-      tdg.draw_path(plt.gcf(), plt.gca(), p)
-      plt.figure()
-      tdg.draw_path_curvature(plt.gcf(), plt.gca(), p)
-      plt.show()
-
+      

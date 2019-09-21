@@ -1,3 +1,10 @@
+#
+#File "/home/poine/work/overlay_ws/src/trr/src/trr/race_manager.py", line 69, in periodic_racing
+#    self.lap_times[-1] = (stamp - self.lap_start_stamp).to_sec()
+#AttributeError: RaceManager instance has no attribute 'lap_start_stamp'
+#
+#
+
 import numpy as np
 import rospy # traces...
 
