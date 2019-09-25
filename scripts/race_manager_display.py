@@ -27,7 +27,7 @@ class ImgPublisher(trr_rpu.DebugImgPublisher):
             cv2.putText(img_bgr, 'v: {:.1f}m/s'.format(_v), (y0, 140), f, h2, c, w)
             cv2.putText(img_bgr, 'lap: {}/{}'.format(real_lap, _tl), (y0, 190), f, h2, c, w)
             for i,_t in enumerate(_times[:real_lap+1]):
-                cv2.putText(img_bgr, ' {}: {:.2f}s'.format(i, _t), (y0, 240+50*i), f, h2, c, w)
+                cv2.putText(img_bgr, ' {}: {:.2f}s'.format(i, _t), (y0, 240+45*i), f, h2, c, w)
                 
         except trr_rpu.NoRXMsgException: pass
         except trr_rpu.RXMsgTimeoutException: pass

@@ -23,6 +23,9 @@ class RaceManager:
             self.cur_lap += 1
             print 'lap time {} cur_lap {}'.format(self.lap_times[-2], self.cur_lap)
 
+    def set_nb_lap(self, _v):
+        self.nb_lap = _v
+        
     def set_cur_lap(self, _v):
         self.cur_lap = _v
         print 'cur_lap {}'.format(self.cur_lap)

@@ -7,6 +7,7 @@ Checklist avant le départ :
 - contrôler la tension de la radio commande
 - vérifier le servo de direction
 - vérifier la rotation des roues
+- configurer le nombre de tours
 - DLVV contrôler la position des obstacles
 - DLVV générer et injecter le circuit
 - charger le bon profil de vitesse

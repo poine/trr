@@ -67,7 +67,7 @@ class Node(trr_rpu.PeriodicNode):
         #pdb.set_trace()
         #print config, level
         self.set_race_mode(config['mode'])
-        #self.nb_lap = config['nb_lap'] TODO
+        self.race_manager.set_nb_lap(config['nb_lap'])
         #self.cur_lap = config['cur_lap']
         return config
 
