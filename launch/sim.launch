@@ -49,8 +49,8 @@
 
 
   <!--  ****** Load configuration *****  -->
-  <!-- load parameters in the parameter server --> 
-  <rosparam command="load" file="$(find roverboard_christine)/config/trr_$(arg trr_config).yaml" />
+  <!-- load parameters in the parameter server --> <!-- FIXME hard wired caroline -->
+  <rosparam command="load" file="$(find roverboard_caroline)/config/trr_$(arg trr_config).yaml" />
 
 
   

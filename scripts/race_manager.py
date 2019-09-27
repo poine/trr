@@ -35,8 +35,16 @@ class Node(trr_rpu.PeriodicNode):
         # we subscribe to state estimator and traffic light
         self.state_est_sub = trr_rpu.TrrStateEstimationSubscriber(what='race_manager')
         self.traffic_light_sub = trr_rpu.TrrTrafficLightSubscriber()
-        
 
+        # we expose a service for loading a velocity profile
+        self.lm_service = rospy.Service('RaceManagerLoadPath', two_d_guidance.srv.GuidanceLoadVelProf, self.on_load_path)
+
+    def on_load_path(self, req):
+        path_filename = ''.join(req.path_filename)
+        print('on_load_path {}'.format(path_filename))
+        err = 0#self.guidance.load_vel_profile(path_filename)
+        return two_d_guidance.srv.GuidanceLoadVelProfResponse(err)
+    
     def on_landmark_passed(self, req):
         print('on_landmark_passed {}'.format(req.id))
         if req.id == trr_u.TrrPath.LM_FINISH:

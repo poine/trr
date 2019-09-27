@@ -5,18 +5,25 @@
   <arg name="run_guidance_display" default="true" />
   <arg name="run_state_est_display" default="true" />
   <arg name="run_race_mgr_display" default="true" />
-  
-  <node name="trr_guidance_display" pkg="two_d_guidance" type="trr_guidance_display_node.py" >
+  <arg name="run_viz" default="false" />
+
+  <arg name="path_filename" default="/home/poine/work/two_d_guidance/paths/demo_z/track_trr_real_0.npz" />
+
+  <node name="trr_guidance_display" pkg="two_d_guidance" type="trr_guidance_display_node.py" output="screen" >
     <param name="robot_name" value="$(arg robot_name)"/>
-    <remap from="/odom" to="/$(arg robot_name)/diff_drive_controller/odom"/>
+    <param name="camera" value="camera_road_front" />
+    <param name="ref_frame" value="base_link_footprint" />
+    <remap from="/odom" to="/oscar_ackermann_controller/odom"/>
   </node>
   
   <node name="trr_state_estimator_display_node" pkg="two_d_guidance" type="trr_state_estimator_display_node.py">
-    <param name="camera" value="camera_horiz_front"/>
+    <param name="camera" value="camera_road_front"/>
+    <param name="path_filename" value="$(arg path_filename)"/>
   </node>
 
   <node name="race_manager_display" pkg="trr" type="race_manager_display.py" >
-      <param name="robot_name" value="$(arg robot_name)"/>
+    <param name="robot_name" value="$(arg robot_name)"/>
+    <param name="camera" value="camera_road_front"/>
   </node>
     
   <group if="$(arg run_viz)">
