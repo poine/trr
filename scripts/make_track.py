@@ -39,9 +39,9 @@ def make_z_room_path(res=0.01):
 
    # add landmarks and velocity profile
    p1 =  trr_u.TrrPath(fname, v=1.)
-   p1.lm_s = [p.dists[-1]-1.21, 0.86] # start and finish are located -1.21 and 0.86 from path origin
+   p1.lm_s = [p.dists[-1]-1.25, 1.25] # start and finish are located -1.25 and 1.25 from path origin
    
-   vel_prof_id = 5
+   vel_prof_id = 0
    vels = [[1., 1., 1., 1., 1., 1., 1., 1., 1.], 
            [1.2, 1., 1., 1., 1., 1., 1., 1., 1.2],
            [1.4, 1.2, 1.1, 1., 1., 1., 1.1, 1.2, 1.4],
@@ -52,7 +52,8 @@ def make_z_room_path(res=0.01):
    make_vel_profile(p1, vels[vel_prof_id], a_max=0, omega_ref=5.5, braking_delay=100)
    p1.report()
    tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
-   fname = os.path.join(tdg_dir, 'paths/demo_z/track_trr_sim_{}.npz'.format(vel_prof_id))
+   #fname = os.path.join(tdg_dir, 'paths/demo_z/track_trr_sim_{}.npz'.format(vel_prof_id))
+   fname = os.path.join(tdg_dir, 'paths/demo_z/track_trr_real_{}.npz'.format(vel_prof_id))
    p1.save(fname)
    
    return fname, p1
@@ -108,11 +109,12 @@ def make_vedrines_path(res=0.01):
            [3, 2, 3, 1, 1, 1, 1, 1, 3, 2, 3],
            [5, 2, 5, 1.5, 1.5, 1.5, 1.5, 1.5, 5, 2, 5],
            [6, 2, 6, 1.5, 1.5, 1.5, 1.5, 1.5, 6, 2, 6]]
-   make_vel_profile(p1, vels[idx_velp], a_max=0, omega_ref=3., braking_delay=100)
-   p1.report()
-   tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
-   fname = os.path.join(tdg_dir, 'paths/vedrines/track_trr_{}.npz'.format(idx_velp))
-   p1.save(fname)
+   for idx_velp in range(len(vels)):
+      make_vel_profile(p1, vels[idx_velp], a_max=0, omega_ref=3., braking_delay=100)
+      p1.report()
+      tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
+      fname = os.path.join(tdg_dir, 'paths/vedrines/track_trr_{}.npz'.format(idx_velp))
+      p1.save(fname)
 
    return fname, p1
 
@@ -227,7 +229,8 @@ def plot_path(_p):
    #tdg.draw_path_curvature(plt.gcf(), plt.gca(), p)
    #tdg.draw_path_vel(plt.gcf(), plt.gca(), _p)
    #tdg.draw_path_accel(plt.gcf(), plt.gca(), _p)
-   tdg.draw_path_vel_profile(plt.gcf(), _p)
+   #tdg.draw_path_vel_profile(plt.gcf(), _p)
+   tdg.draw_path_vel_profile_chrono(plt.gcf(), _p)
    #plt.figure()
    #tdg.draw_path(plt.gcf(), plt.gca(), _p)
    plt.figure()
@@ -242,8 +245,8 @@ def plot_path(_p):
 if __name__ == '__main__':
    logging.basicConfig(level=logging.INFO)
    np.set_printoptions(linewidth=300, suppress=True)
-   fname, p = make_z_room_path()
-   #fname, p = make_vedrines_path()
+   #fname, p = make_z_room_path()
+   fname, p = make_vedrines_path()
    if 1:
       plot_path(p)
       plt.show()
