@@ -7,9 +7,10 @@
   <arg name="run_race_mgr_display" default="true" />
   <arg name="run_viz" default="false" />
 
-  <arg name="path_filename" default="/home/poine/work/two_d_guidance/paths/demo_z/track_trr_real_0.npz" />
-
-  <node name="trr_guidance_display" pkg="two_d_guidance" type="trr_guidance_display_node.py" output="screen" >
+  <arg name="trr_config" default="zroom" />
+  <rosparam command="load" file="$(find roverboard_christine)/config/trr_$(arg trr_config).yaml" />
+  
+  <node name="trr_guidance_display_node" pkg="two_d_guidance" type="trr_guidance_display_node.py" output="screen" >
     <param name="robot_name" value="$(arg robot_name)"/>
     <param name="camera" value="camera_road_front" />
     <param name="ref_frame" value="base_link_footprint" />
@@ -18,7 +19,6 @@
   
   <node name="trr_state_estimator_display_node" pkg="two_d_guidance" type="trr_state_estimator_display_node.py">
     <param name="camera" value="camera_road_front"/>
-    <param name="path_filename" value="$(arg path_filename)"/>
   </node>
 
   <node name="race_manager_display" pkg="trr" type="race_manager_display.py" >
@@ -28,7 +28,7 @@
     
   <group if="$(arg run_viz)">
     <node name="rviz" pkg="rviz" type="rviz" required="true"
-          args="-d $(find two_d_guidance)/rviz/follow_line_$(arg robot_name)_real.rviz" />
+          args="-d $(find trr)/rviz/christine_real.rviz" />
   </group>
 
   
