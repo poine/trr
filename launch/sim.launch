@@ -80,7 +80,6 @@
       <param name="robot_name"     value="$(arg robot_name)" />
       <param name="cameras"        value="$(arg robot_name)/camera_road_front"/>
       <param name="ref_frame"      value="$(arg robot_name)/base_link_footprint"/>
-      <param name="mask_threshold" value="180"/>
     </node>
   </group>
 
@@ -98,7 +97,6 @@
       <param name="robot_name"     value="$(arg robot_name)" />
       <param name="cameras" value="$(arg robot_name)/camera_road_front"/>
       <param name="ref_frame" value="$(arg robot_name)/base_link_footprint"/>
-      <param name="mask_threshold" value="180"/>
     </node>
   </group>
 
