@@ -7,11 +7,9 @@ import pdb
 import threading
 import make_track
 
-# /home/poine/work/smocap/smocap_gazebo/scripts/hog_remote.py
+# Edit GUI description with glade
 
-# glade
-
-# roscore
+# Run roscore before
 
 import rospy, sensor_msgs.msg, visualization_msgs.msg, geometry_msgs.msg, std_msgs.msg, nav_msgs.msg
 
@@ -407,9 +405,11 @@ class App:
         self.trr_path.report()
         if save:
             self.trr_path.save('/tmp/ph.npz')
-        make_track.plot_path(self.trr_path)
+        else:
+            make_track.plot_path(self.trr_path)
         self.node.set_suspend_periodic(False)
-        matplotlib.pyplot.show() #TODO fix mainloop problem
+        if not save:
+            matplotlib.pyplot.show() #TODO fix mainloop problem
                 
     def create_point(self, point_type, position=0., speed=0., offset_size=0., offset_length=0.):
         point = Point(point_type, position=position, speed=speed, offset_size=offset_size, offset_length=offset_length)
