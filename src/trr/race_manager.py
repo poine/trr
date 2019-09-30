@@ -72,19 +72,10 @@ class RaceManager:
         car.set_guidance_mode(2) # guidance is driving when racing
 
     def periodic_racing(self, state_est_sub, traffic_light_sub, update_race_mode_cbk, stamp):
-        #s_est, v_est, cur_lap, dist_to_start, dist_to_finish = state_est_sub.get()
-        #rospy.loginfo('racing_periodic: finish crossed {}'.format(self.finish_crossed))
-        #if self.finish_crossed:
-            #rospy.loginfo('racing_periodic: finish crossed {}/{}'.format(self.cur_lap, self.nb_lap))
         self.lap_times[-1] = (stamp - self.lap_start_stamp).to_sec()
         if self.cur_lap > self.nb_lap: # we brake
             rospy.loginfo('final lap ({}/{}): braking'.format(self.cur_lap, self.nb_lap))
             update_race_mode_cbk(RaceManager.mode_finished)
-            #else:
-                #self.dyn_cfg_update_cur_lap(self.cur_lap+1) # or we pass to next lap
-            #    self.cur_lap += 1
-            #    rospy.loginfo('starting lap {}'.format(self.cur_lap))
-            #self.finish_crossed = False
 
     # -Finished: we do nothing
     #
