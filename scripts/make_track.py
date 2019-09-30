@@ -103,11 +103,14 @@ def make_vedrines_path(res=0.01):
    # add landmarks and velocity profile
    p1 =  trr_u.TrrPath(fname, v=1.)
    p1.lm_s = [0., 16.66] # start and finish are located at 0 and 16.66 m from path origin
-   idx_velp = 3
+   idx_velp = 1
    vels = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-           [3, 2, 3, 1, 1, 1, 1, 1, 3, 2, 3],
-           [5, 2, 5, 1.5, 1.5, 1.5, 1.5, 1.5, 5, 2, 5],
-           [6, 2, 6, 1.5, 1.5, 1.5, 1.5, 1.5, 6, 2, 6]]
+           [3, 2, 3, 2, 2, 2, 2, 2, 3, 2, 3],
+           [4, 2, 4, 2, 2, 2, 2, 2, 4, 2, 4],
+           [6, 2, 6, 1.5, 1.5, 1.5, 1.5, 1.5, 6, 2, 6],
+           [6, 2.5, 6, 2, 2.5, 2, 2.5, 2, 6, 2.5, 6],
+           [7, 2.5, 7, 2, 2.5, 2, 2.5, 2, 7, 2.5, 7],
+           [8, 2.5, 8, 2, 2.5, 2, 2.5, 2, 8, 2.5, 8]]
    make_vel_profile(p1, vels[idx_velp], a_max=0, omega_ref=3., braking_delay=100)
    p1.report()
    tdg_dir = rospkg.RosPack().get_path('two_d_guidance')
@@ -116,18 +119,6 @@ def make_vedrines_path(res=0.01):
 
    return fname, p1
 
-#
-# Velocity profile
-#
-def filter(vel_sps, omega=3., xi=0.9):
-   ref = tdg.utils.SecOrdLinRef(omega=omega, xi=xi)
-   out = np.zeros((len(vel_sps), 3))
-   dt = 0.01 #WTF...
-   # run ref
-   out[0, 0] = vel_sps[0]; ref.reset(out[0])
-   for i in range(1,len(vel_sps)):
-      out[i] = ref.run(dt, vel_sps[i])
-   return out
 
 # velocity profile proportional to path curvature
 # (for reference)
@@ -137,7 +128,7 @@ def make_curvature_based_vel_profile(fname, v0=1.75, kc=0.75, _plot=False):
    path = trr_u.TrrPath(fname)
    for i, c in enumerate(path.curvatures):
       path.vels[i] = v0 - kc*abs(c) # why not ...
-   fltrd, delayed_curv = filter(path.vels)
+   fltrd, delayed_curv = trr_u.filter(path.vels, path.dists)
    if _plot:
       plt.subplot(3,1,1)
       plt.plot(fltrd[:,0])
@@ -176,14 +167,6 @@ def _saturate_vel(path, a_max):
       else:
          path.vels[i] = path.vels[i-1]
 
-def _compute_time(path):
-   # integrate velocity
-   path.time = np.zeros(len(path.points))
-   for i in range(1, len(path.time)):
-      d = path.dists[i]-path.dists[i-1]
-      path.time[i] = path.time[i-1] + d/path.vels[i-1]
-   print('lap time: {:.2f}s'.format(path.time[-1]))
-
 
 def _set_piecewise_setpoints(discs, vels, path):
    idx_vel = 0
@@ -210,12 +193,13 @@ def make_vel_profile(path, vels, a_max, omega_ref=3, braking_delay=100):
       if vels[i] > vels[i+1]: 
          path.vels[disc[0]-braking_delay:disc[0]] = vels[i+1]
    if 1: # reference model
-      fltrd = filter(path.vels, omega=omega_ref)
+      fltrd = trr_u.filter(path.vels, path.dists, omega=omega_ref)
       path.vels = fltrd[:,0]
       path.accels = fltrd[:,1]
       path.jerks = fltrd[:,2]
 
-   _compute_time(path)
+   path.compute_time()
+   print('lap time: {:.2f}s'.format(path.time[-1]))
 
 
 def plot_vedrines():
@@ -242,8 +226,8 @@ def plot_path(_p):
 if __name__ == '__main__':
    logging.basicConfig(level=logging.INFO)
    np.set_printoptions(linewidth=300, suppress=True)
-   fname, p = make_z_room_path()
-   #fname, p = make_vedrines_path()
+   #fname, p = make_z_room_path()
+   fname, p = make_vedrines_path()
    if 1:
       plot_path(p)
       plt.show()
