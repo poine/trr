@@ -46,7 +46,7 @@ class Node(trr_rpu.PeriodicNode):
         return two_d_guidance.srv.GuidanceLoadVelProfResponse(err)
     
     def on_landmark_passed(self, req):
-        print('on_landmark_passed {}'.format(req.id))
+        rospy.loginfo('  on landmark passed {}'.format(req.id))
         if req.id == trr_u.TrrPath.LM_FINISH:
             self.race_manager.next_lap(rospy.Time.now())
         return two_d_guidance.srv.LandmarkPassedResponse(0)
