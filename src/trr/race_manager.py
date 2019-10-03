@@ -93,7 +93,7 @@ class RaceManager:
         car.set_guidance_vel_ctl_mode(0) # Cst
         car.set_guidance_mode(2) # driving when going to start
 
-    def periodic_join_start(self, state_est_sub, traffic_light_sub, update_race_mode_cbk, stamp, dist_to_stop_at=0.15):
+    def periodic_join_start(self, state_est_sub, traffic_light_sub, update_race_mode_cbk, stamp, dist_to_stop_at=0.5):
         s_est, is_est, v_est, dist_to_start, dist_to_finish = state_est_sub.get()
         if dist_to_start < dist_to_stop_at:
             rospy.loginfo('start joined, going to ready')
